@@ -23,8 +23,7 @@ jobs:
         shell: bash
         
       - name: Show Available Destinations
-        run: xcodebuild -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -showdestinations
-
+        run: xcrun simctl create "iPhone 8 Plus" "com.apple.CoreSimulator.SimRuntime.iOS-12-4"
       - name: Show Build SDK
         run: xcodebuild -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -showsdks
 
