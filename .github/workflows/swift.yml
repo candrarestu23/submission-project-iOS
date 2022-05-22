@@ -22,7 +22,7 @@ jobs:
         run: pod install --repo-update
         shell: bash
       - name: Run tests
-        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus'
+        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator, OS=12.4, name=iPhone 8 Plus'
 
       # Runs a set of commands using the runners shell
       - name: Build App
