@@ -23,7 +23,7 @@ jobs:
         shell: bash
         
       - name: Show Available Destinations
-        run: xcodebuild -workspace Grocery.xcworkspace -scheme Grocery -showdestinations
+        run: xcodebuild -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -showdestinations
 
       - name: Show Build SDK
         run: xcodebuild -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -showsdks
