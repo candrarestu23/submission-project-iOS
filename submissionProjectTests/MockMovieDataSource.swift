@@ -71,7 +71,7 @@ final class MockMovieDataSource {
         return Observable<MovieReviewResponse>.create { observer in
             let decoder = JSONDecoder()
             
-            guard let pathString = Bundle(for: type(of: self)).path(forResource: "MockMovieDetail", ofType: "json") else {
+            guard let pathString = Bundle(for: type(of: self)).path(forResource: "MockMovieReviews", ofType: "json") else {
                 return observer.onError(fatalError()) as! Disposable
             }
             
