@@ -31,7 +31,7 @@ jobs:
           xcrun simctl list devices 15.2
 
       - name: Run tests
-        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone X'
+        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus'
 
       # Runs a set of commands using the runners shell
       - name: Build App
