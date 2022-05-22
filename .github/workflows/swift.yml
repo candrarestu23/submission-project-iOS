@@ -21,14 +21,12 @@ jobs:
       - name: Install Dependencies
         run: pod install --repo-update
         shell: bash
-        
-      - name: Show Available Destinations
-        run: xcrun simctl create "iPhone 8 Plus" "com.apple.CoreSimulator.SimRuntime.iOS-12-4"
+
       - name: Show Build SDK
         run: xcodebuild -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -showsdks
 
       - name: Run tests
-        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus,OS=12.4'
+        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone X,OS=latest'
 
       # Runs a set of commands using the runners shell
       - name: Build App
