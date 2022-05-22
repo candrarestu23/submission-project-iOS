@@ -18,9 +18,9 @@ jobs:
       - name: switch to xcode 13
         run: sudo xcode-select --switch /Applications/Xcode_13.0.app/Contents/Developer
       # Runs a single command using the runners shell
-      - name: Install Dependencies
-        run: pod install --repo-update
-        shell: bash
+      #- name: Install Dependencies
+      #  run: pod install --repo-update
+       # shell: bash
 
       - name: Prepare iOS 12 simulator
         run: |
@@ -31,7 +31,7 @@ jobs:
           xcrun simctl list devices 15.0
 
       - name: Run tests
-        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus,OS=15.0'
+        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus'
 
       # Runs a set of commands using the runners shell
       - name: Build App
