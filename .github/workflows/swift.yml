@@ -21,6 +21,11 @@ jobs:
       - name: Install Dependencies
         run: pod install --repo-update
         shell: bash
+        	
+
+      - name: Show Build SDK
+        run: xcodebuild -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -showsdks
+
       - name: Run tests
         run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus,OS=12.4'
 
