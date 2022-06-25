@@ -16,7 +16,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       - name: switch to xcode 13
-        run: sudo xcode-select --switch /Applications/Xcode_13.2.app/Contents/Developer
+        run: sudo xcode-select --switch /Applications/Xcode_13.4.app/Contents/Developer
       # Runs a single command using the runners shell
       - name: Install Dependencies
         run: pod install --repo-update
