@@ -25,10 +25,10 @@ jobs:
       - name: Prepare iOS 12 simulator
         run: |
           sudo mkdir -p /Library/Developer/CoreSimulator/Profiles/Runtimes
-          sudo ln -s /Applications/Xcode_13.2.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/CoreSimulator/Profiles/Runtimes/iOS.simruntime /Library/Developer/CoreSimulator/Profiles/Runtimes/iOS\ 15.2.simruntime
+          sudo ln -s /Applications/Xcode_13.4.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/CoreSimulator/Profiles/Runtimes/iOS.simruntime /Library/Developer/CoreSimulator/Profiles/Runtimes/iOS\ 15.5.simruntime
           xcrun simctl list runtimes
-          xcrun simctl create custom-test-device "iPhone 8 Plus" "com.apple.CoreSimulator.SimRuntime.iOS-15-2"
-          xcrun simctl list devices 15.2
+          xcrun simctl create custom-test-device "iPhone 8 Plus" "com.apple.CoreSimulator.SimRuntime.iOS-15-5"
+          xcrun simctl list devices 15.5
 
       - name: Run tests
         run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus'
