@@ -18,15 +18,4 @@ class HomeBuilder {
         Injection.init().provideHomeViewModel(container: container)
         return factory(container.resolve(HomeViewController.self) ?? UIViewController())
     }
-    
-    static func build(
-        container: Container,
-        delegate: BottomSheetDelegate
-    ) -> UIViewController {
-        Injection.init().provideBottomSheetViewModel(
-            container: container,
-            delegate: delegate
-        )
-        return container.resolve(BottomSheetViewController.self) ?? UIViewController()
-    }
 }

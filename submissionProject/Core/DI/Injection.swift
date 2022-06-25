@@ -9,34 +9,15 @@ import Foundation
 import RealmSwift
 import Swinject
 import SwinjectStoryboard
+import Home
+import Core
+import Detail
 
 final class Injection: NSObject {
     
-    private func provideRepository() -> MovieRepositoryDelegate {
-        let realm = try? Realm()
-        
-        let locale: LocaleDataSource = LocaleDataSource.sharedInstance(realm)
-        let remote: RemoteDataSource = RemoteDataSource.sharedInstance
-        
-        return MovieRepository.sharedInstance(locale, remote)
-    }
-    
-    func provideHome() -> HomeUseCase {
-        let repository = provideRepository()
-        return HomeInteractor(repository: repository)
-    }
-    
-    func provideFavorite() -> FavoriteUseCase {
-        let repository = provideRepository()
-        return FavoriteInteractor(repository: repository)
-    }
-    
-    func provideDetail() -> DetailUseCase {
-        let repository = provideRepository()
-        return DetailInteractor(repository: repository)
-    }
-    
     func provideHomeViewModel(container: Container) {
+        let appDelegate = UIApplication.shared.delegate as? AppDelegate
+        guard let realm = appDelegate?.realm else { return }
         let homeViewController = HomeViewController(
             nibName: "HomeViewController",
             bundle: nil)
@@ -44,13 +25,20 @@ final class Injection: NSObject {
             return HomeRouter(view: homeViewController)
         }
         
-        container.register(HomeViewModel.self) { resolver -> HomeViewModel in
-            return HomeViewModel(homeUseCase: self.provideHome(),
-                                 router: resolver.resolve(HomeRouter.self)!)
+        container.register(HomeViewModel<HomeInteractor<MovieListModel, URLRequest, GetMovieListRepository<GetMoviesDataSource, GetMovieListLocaldataSource, MovieListTransformer>>>.self) { resolver -> HomeViewModel in
+            let remote = GetMoviesDataSource()
+            let local = GetMovieListLocaldataSource(realm: realm)
+            let mapper = MovieListTransformer()
+            let repository = GetMovieListRepository(remoteDataSource: remote,
+                                                    localDataSource: local,
+                                                    transformer: mapper)
+            let interactor = HomeInteractor(repository: repository)
+            return HomeViewModel(homeUseCase: interactor)
         }
-        
+
         container.register(HomeViewController.self) { resolver -> HomeViewController in
             homeViewController.viewModel = resolver.resolve(HomeViewModel.self)
+            homeViewController.router = resolver.resolve(HomeRouter.self)
             return homeViewController
         }
     }
@@ -59,56 +47,36 @@ final class Injection: NSObject {
                                 movieID: Int,
                                 isFavorite: Bool,
                                 movieDetail: MovieDetailModel) {
+        
+        let appDelegate = UIApplication.shared.delegate as? AppDelegate
+        guard let realm = appDelegate?.realm else { return }
+        
         let viewController = DetailViewController(nibName: "DetailViewController",
                                                       bundle: nil)
         
-        container.register(DetailViewModel.self) { _ -> DetailViewModel in
-            return DetailViewModel(
-                detailUseCase: self.provideDetail(),
-                movieID: movieID,
-                isFavorite: isFavorite,
-                movieData: movieDetail)
+        container.register(MovieDetailViewModel<DetailInteractor<URLRequest, MovieDetailModel, MovieReviewModel, CastListModel, GetMovieDetailRepository<GetMovieDetailDataSource, GetMovieReviewDataSource, GetMovieCastDataSource, GetMovieDetailLocaldataSource, MovieDetailTransformer, MovieReviewTransformer, CastListTransformer>>>.self) { resolver -> MovieDetailViewModel in
+            let remoteDetail = GetMovieDetailDataSource()
+            let remoteReview = GetMovieReviewDataSource()
+            let remoteCast = GetMovieCastDataSource()
+            let local = GetMovieDetailLocaldataSource(realm: realm)
+            let detailTransformer = MovieDetailTransformer()
+            let reviewTransformer = MovieReviewTransformer()
+            let castTransformer = CastListTransformer()
+
+            let repository = GetMovieDetailRepository(remoteDataSource: remoteDetail,
+                                                      reviewDataSource: remoteReview,
+                                                      castDataSource: remoteCast,
+                                                      localDataSource: local,
+                                                      detailTransformer: detailTransformer,
+                                                      reviewtransformer: reviewTransformer,
+                                                      castTransformer: castTransformer)
+            let interactor = DetailInteractor(repository: repository)
+            return MovieDetailViewModel(detailUseCase: interactor, movieID: movieID, isFavorite: isFavorite, movieData: movieDetail)
         }
-        
+
         container.register(DetailViewController.self) { resolver -> DetailViewController in
-            viewController.viewModel = resolver.resolve(DetailViewModel.self)
+            viewController.viewModel = resolver.resolve(MovieDetailViewModel.self)
             return viewController
         }
     }
-    
-    func provideBottomSheetViewModel(container: Container, delegate: BottomSheetDelegate) {
-        let viewController = BottomSheetViewController(
-            nibName: "BottomSheetViewController",
-            bundle: nil)
-        
-        container.register(BottomSheetViewModel.self) { _ -> BottomSheetViewModel in
-            return BottomSheetViewModel()
-        }
-        
-        container.register(BottomSheetViewController.self) { resolver -> BottomSheetViewController in
-            viewController.viewModel = resolver.resolve(BottomSheetViewModel.self)
-            viewController.delegate = delegate
-            return viewController
-        }
-    }
-    
-    func provideFavoriteViewModel(container: Container) {
-        let favoriteViewController = FavoriteViewController(
-            nibName: "FavoriteViewController",
-            bundle: nil)
-        container.register(FavoriteRouter.self) { _ -> FavoriteRouter in
-            return FavoriteRouter(view: favoriteViewController)
-        }
-        
-        container.register(FavoriteViewModel.self) { resolver -> FavoriteViewModel in
-            return FavoriteViewModel(favoriteUseCase: self.provideFavorite(),
-                                 router: resolver.resolve(FavoriteRouter.self)!)
-        }
-        
-        container.register(FavoriteViewController.self) { resolver -> FavoriteViewController in
-            favoriteViewController.viewModel = resolver.resolve(FavoriteViewModel.self)
-            return favoriteViewController
-        }
-    }
-    
 }

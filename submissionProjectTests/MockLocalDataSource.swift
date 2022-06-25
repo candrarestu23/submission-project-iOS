@@ -9,9 +9,10 @@ import Foundation
 import Foundation
 import RxSwift
 import RealmSwift
-@testable import submissionProject
+import Home
+import Core
 
-final class MockLocalDataSource {
+final class MockLocalDataSource: LocaleDataSource {
     
     public typealias Response = MovieEntity
     public typealias Request = MovieEntity
@@ -21,20 +22,7 @@ final class MockLocalDataSource {
         _realm = realm
     }
     
-    func getMovieDetail() -> Observable<MovieEntity> {
-        return Observable<MovieEntity>.create { observer in
-            if let realm = self._realm {
-                guard let movie = realm.objects(MovieEntity.self).first else { return Disposables.create() }
-                observer.onNext(movie)
-                observer.onCompleted()
-            } else {
-                observer.onError(APIError.localDatabaseError)
-            }
-            return Disposables.create()
-        }
-    }
-    
-    func getMovieList() -> Observable<[MovieEntity]> {
+    public func getMovieList() -> Observable<[MovieEntity]> {
         return Observable<[MovieEntity]>.create { observer in
             if let realm = self._realm {
                 let categories: Results<MovieEntity> = {
@@ -50,15 +38,15 @@ final class MockLocalDataSource {
         }
     }
     
-    func addMovies(from movies: [MovieEntity]) -> Observable<Bool> {
-        return Observable<Bool>.create { observer in
+    public func addMovies(from movies: [MovieEntity]) -> Observable<[MovieEntity]> {
+        return Observable<[MovieEntity]>.create { observer in
             if let realm = self._realm {
                 do {
                     try realm.write {
                         for category in movies {
                             realm.add(category, update: .all)
                         }
-                        observer.onNext(true)
+                        observer.onNext(movies)
                         observer.onCompleted()
                     }
                 } catch {
@@ -71,7 +59,7 @@ final class MockLocalDataSource {
         }
     }
     
-    func addMovie(from movie: MovieEntity) -> Observable<Bool> {
+    public func addMovie(from movie: MovieEntity) -> Observable<Bool> {
         return Observable<Bool>.create { observer in
             if let realm = self._realm {
                 do {
@@ -90,7 +78,25 @@ final class MockLocalDataSource {
         }
     }
     
-    func removeMovie(from id: Int) -> Observable<Bool> {
+    public func getMovieDetail(id: Int) -> Observable<MovieEntity> {
+        return Observable<MovieEntity>.create { observer in
+            if let realm = self._realm {
+                let movie = realm.object(ofType: MovieEntity.self, forPrimaryKey: id)
+
+                guard let movie = movie else {
+                    return Disposables.create()
+                }
+                
+                observer.onNext(movie)
+                observer.onCompleted()
+            } else {
+                observer.onError(APIError.localDatabaseError)
+            }
+            return Disposables.create()
+        }
+    }
+    
+    public func removeMovie(from id: Int) -> Observable<Bool> {
         return Observable<Bool>.create { observer in
             if let realm = self._realm {
                 do {
@@ -112,7 +118,7 @@ final class MockLocalDataSource {
         }
     }
     
-    func removeAllMovies() -> Observable<Bool> {
+    public func removeAllMovies() -> Observable<Bool> {
         return Observable<Bool>.create { observer in
             if let realm = self._realm {
                 do {

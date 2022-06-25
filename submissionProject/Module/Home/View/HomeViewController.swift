@@ -9,12 +9,19 @@ import UIKit
 import RxSwift
 import RxCocoa
 import SDWebImage
+import Home
+import Core
 
 class HomeViewController: UIViewController {
 
     @IBOutlet weak var tableView: UITableView!
     
-    var viewModel: HomeViewModel?
+    var viewModel: HomeViewModel<HomeInteractor<MovieListModel,
+                                                    URLRequest,
+                                                    GetMovieListRepository<GetMoviesDataSource,
+                                                                            GetMovieListLocaldataSource,
+                                                                            MovieListTransformer>>>?
+    var router: HomeRouter?
     var disposeBag = DisposeBag()
     
     lazy var spinner = UIActivityIndicatorView(
@@ -24,12 +31,20 @@ class HomeViewController: UIViewController {
                      height: 60)
     )
     
+    lazy var searchBar:UISearchBar = UISearchBar(frame: CGRect(x: 0,
+                                                               y: 0,
+                                                               width: Int(UIScreen.main.bounds.width) - 40,
+                                                               height: 70))
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupTableView()
         setupNavBar()
         bindData()
-        viewModel?.getMovies()
+        viewModel?.getMovies(
+            urlRequest: MoviesAPI.getMovies(viewModel?.page ?? 1,
+                                            "popular").urlRequest
+        )
     }
     
     private func setupTableView() {
@@ -48,16 +63,10 @@ class HomeViewController: UIViewController {
     
     private func setupNavBar() {
         self.title = "Home"
-        
-        let tapGestureRecognizer = UITapGestureRecognizer(
-            target: self,
-            action: #selector(imageTapped(tapGestureRecognizer:))
-        )
-        
-        let imageView = UIImageView(image: UIImage(systemName: "heart.fill"))
-        imageView.addGestureRecognizer(tapGestureRecognizer)
-        let item = UIBarButtonItem(customView: imageView)
-        self.navigationItem.rightBarButtonItem = item
+        searchBar.placeholder = "Search Movie"
+        searchBar.delegate = self
+        let leftNavBarButton = UIBarButtonItem(customView:searchBar)
+        self.navigationItem.leftBarButtonItem = leftNavBarButton
     }
     
     private func bindData() {
@@ -69,23 +78,35 @@ class HomeViewController: UIViewController {
                     cell.movieImage.sd_setImage(with: imageUrl)
                     cell.titleLabel.text = item.title
                     cell.releaseDateLabel.text = item.releaseDate
-                    cell.overviewLabel.text = item.overview
+                    cell.genreLabel.text = item.overview
                     if index == (self?.viewModel?.data.value.count ?? 0) - 1 {
                         if let isLoading = self?.viewModel?.isLoading,
                            isLoading.value == false,
-                           let page = self?.viewModel?.page.value,
+                           let page = self?.viewModel?.page,
                            page > 1 {
-                            self?.viewModel?.getMovies()
+                            if let keyword = self?.viewModel?.searchKeyword {
+                                if keyword.isEmpty {
+                                    self?.viewModel?.getMovies(
+                                        urlRequest: MoviesAPI.getMovies(
+                                            self?.viewModel?.page ?? 1, "popular"
+                                        ).urlRequest
+                                    )
+                                } else {
+                                    self?.viewModel?.getSearchMovies(
+                                        urlRequest: MoviesAPI.getSearchMovie(self?.viewModel?.searchKeyword ?? "",
+                                                                             self?.viewModel?.page ?? 1).urlRequest
+                                    )
+                                }
+                            }
                         }
                     }
                 }.disposed(by: disposeBag)
         
         tableView.rx.itemSelected
             .subscribe(onNext: { [weak self] indexPath in
-                self?.viewModel?
-                    .onItemListSelected(
-                        id: self?.viewModel?.dataList[indexPath.row].movieID ?? 0
-                    )
+                self?.router?.routeToDetailPage(
+                    self?.viewModel?.dataList.at(index: indexPath.row)?.movieID ?? 0
+                )
             }).disposed(by: disposeBag)
         
         viewModel?.isLoading.observe(disposeBag) { [weak self] (isLoading) in
@@ -104,24 +125,32 @@ class HomeViewController: UIViewController {
             guard let isEmpty = isEmpty else {
                 return
             }
-//            self.emptyListLabel.isHidden = !isEmpty
         }
-    }
-    
-    @IBAction func onCategoryClick(_ sender: Any) {
-        viewModel?.onCategorySelecter(delegate: self)
-    }
-    
-    @objc func imageTapped(tapGestureRecognizer: UITapGestureRecognizer) {
-        viewModel?.onFavoriteSelected()
     }
 }
 
-extension HomeViewController: BottomSheetDelegate {
-    func onItemSelected(type: String) {
-        viewModel?.type.value = type
-        viewModel?.data.accept([])
-        viewModel?.dataList.removeAll()
-        viewModel?.getMovies()
+extension HomeViewController: UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        self.viewModel?.dataList.removeAll()
+        self.viewModel?.data.accept(viewModel?.dataList ?? [])
+        self.viewModel?.page = 1
+        self.viewModel?.removeAllCache()
+        self.viewModel?.searchKeyword = searchBar.text ?? ""
+        if !(searchBar.text ?? "").isEmpty {
+            self.viewModel?.getSearchMovies(
+                urlRequest: MoviesAPI.getSearchMovie(self.viewModel?.searchKeyword ?? "",
+                                                     self.viewModel?.page ?? 1).urlRequest
+            )
+        }
+    }
+    
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        self.viewModel?.dataList.removeAll()
+        self.viewModel?.data.accept(viewModel?.dataList ?? [])
+        self.viewModel?.page = 1
+        self.viewModel?.removeAllCache()
+        self.viewModel?.getMovies(
+            urlRequest: MoviesAPI.getMovies(self.viewModel?.page ?? 1, "popular").urlRequest
+        )
     }
 }

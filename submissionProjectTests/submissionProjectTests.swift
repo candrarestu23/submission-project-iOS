@@ -9,23 +9,38 @@ import XCTest
 import RxSwift
 import Swinject
 import RealmSwift
+@testable import Home
+@testable import Core
+@testable import Detail
 @testable import submissionProject
 
 class submissionProjectTests: XCTestCase {
 
-    var homeViewModel: HomeViewModel!
-    var detailViewModel: DetailViewModel!
-    var favoriteViewModel: FavoriteViewModel!
+    var homeViewModel: HomeViewModel<HomeInteractor<MovieListModel,
+                                                    URLRequest,
+                                                    GetMovieListRepository<MockMovieDataSource,
+                                                                            MockLocalDataSource,
+                                                                            MovieListTransformer>>>!
+    
+    var detailViewModel: MovieDetailViewModel<DetailInteractor<URLRequest,
+                                                               MovieDetailModel,
+                                                               MovieReviewModel,
+                                                               CastListModel,
+                                                               GetMovieDetailRepository<MockDetailDataSource,
+                                                                                        MockReviewDataSource,
+                                                                                        MockCastDataSource,
+                                                                                        MockLocalDataSource,
+                                                                                        MovieDetailTransformer,
+                                                                                        MovieReviewTransformer,
+                                                                                        CastListTransformer>>>!
     var container: Container!
     var realm: Realm!
     
     override func setUp() {
         self.container = Container()
         realm = try! Realm()
-        
         setupHomeController()
         setupDetailController()
-        setupFavoriteController()
     }
     
     private func setupHomeController() {
@@ -37,54 +52,50 @@ class submissionProjectTests: XCTestCase {
             return HomeRouter(view: homeController)
         }
         
-        container.register(HomeViewModel.self) { resolver -> HomeViewModel in
+        container.register(HomeViewModel<HomeInteractor<MovieListModel, URLRequest, GetMovieListRepository<MockMovieDataSource, MockLocalDataSource, MovieListTransformer>>>.self) { resolver -> HomeViewModel in
             let remote = MockMovieDataSource()
             let local = MockLocalDataSource(realm: self.realm)
-            let repository = MockMovieRepository(locale: local, remote: remote)
+            let mapper = MovieListTransformer()
+            let repository = GetMovieListRepository(remoteDataSource: remote,
+                                                    localDataSource: local,
+                                                    transformer: mapper)
             let interactor = HomeInteractor(repository: repository)
-            let router = resolver.resolve(HomeRouter.self)
-            return HomeViewModel(homeUseCase: interactor, router: router)
+            return HomeViewModel(homeUseCase: interactor)
+        }
+        
+        container.register(HomeViewController.self) { resolver -> HomeViewController in
+            homeController.viewModel = resolver.resolve(HomeViewModel.self)
+            return homeController
         }
     }
     
     private func setupDetailController() {
-        let detailController = DetailViewController(
-            nibName: "DetailViewController",
-            bundle: nil)
+        let viewController = DetailViewController(nibName: "DetailViewController",
+                                                      bundle: nil)
         
-        container.register(DetailRouter.self) { _ -> DetailRouter in
-            return DetailRouter(view: detailController)
-        }
-        
-        container.register(DetailViewModel.self) { resolver -> DetailViewModel in
-            let remote = MockMovieDataSource()
+        container.register(MovieDetailViewModel<DetailInteractor<URLRequest, MovieDetailModel, MovieReviewModel, CastListModel, GetMovieDetailRepository<MockDetailDataSource, MockReviewDataSource, MockCastDataSource, MockLocalDataSource, MovieDetailTransformer, MovieReviewTransformer, CastListTransformer>>>.self) { resolver -> MovieDetailViewModel in
+            let remoteDetail = MockDetailDataSource()
+            let remoteReview = MockReviewDataSource()
+            let remoteCast = MockCastDataSource()
             let local = MockLocalDataSource(realm: self.realm)
-            let repository = MockMovieRepository(locale: local, remote: remote)
+            let detailTransformer = MovieDetailTransformer()
+            let reviewTransformer = MovieReviewTransformer()
+            let castTransformer = CastListTransformer()
+
+            let repository = GetMovieDetailRepository(remoteDataSource: remoteDetail,
+                                                      reviewDataSource: remoteReview,
+                                                      castDataSource: remoteCast,
+                                                      localDataSource: local,
+                                                      detailTransformer: detailTransformer,
+                                                      reviewtransformer: reviewTransformer,
+                                                      castTransformer: castTransformer)
             let interactor = DetailInteractor(repository: repository)
-            return DetailViewModel(
-                detailUseCase: interactor,
-                movieID: 0,
-                isFavorite: false,
-                movieData: nil)
+            return MovieDetailViewModel(detailUseCase: interactor, movieID: 1, isFavorite: false, movieData: nil)
         }
-    }
-    
-    private func setupFavoriteController() {
-        let favoriteController = FavoriteViewController(
-            nibName: "FavoriteViewController",
-            bundle: nil)
-        
-        container.register(FavoriteRouter.self) { _ -> FavoriteRouter in
-            return FavoriteRouter(view: favoriteController)
-        }
-        
-        container.register(FavoriteViewModel.self) { resolver -> FavoriteViewModel in
-            let remote = MockMovieDataSource()
-            let local = MockLocalDataSource(realm: self.realm)
-            let repository = MockMovieRepository(locale: local, remote: remote)
-            let interactor = FavoriteInteractor(repository: repository)
-            let router = resolver.resolve(FavoriteRouter.self)
-            return FavoriteViewModel(favoriteUseCase: interactor, router: router)
+
+        container.register(DetailViewController.self) { resolver -> DetailViewController in
+            viewController.viewModel = resolver.resolve(MovieDetailViewModel.self)
+            return viewController
         }
     }
     
@@ -113,53 +124,78 @@ class submissionProjectTests: XCTestCase {
     
     func test_home_get_movie_list() {
         homeViewModel = container.resolve(HomeViewModel.self)
-        
-        homeViewModel.getMovies()
+        homeViewModel.getMovies(urlRequest: MoviesAPI.getMovies(1, "").urlRequest)
         XCTAssert(homeViewModel.dataList.count > 0)
     }
-
-    func test_home_saved_data() {
+    
+    func test_home_movie_list_data() {
         homeViewModel = container.resolve(HomeViewModel.self)
-        homeViewModel.getMovies()
+        homeViewModel.getMovies(urlRequest: MoviesAPI.getMovies(1, "").urlRequest)
         XCTAssert(homeViewModel.dataList.at(index: 0)?.title == "The Lost City")
-        XCTAssert(homeViewModel.dataList.at(index: 0)?.releaseDate == "2022-03-24")
-        XCTAssert(homeViewModel.dataList.at(index: 0)?.posterPath == "/neMZH82Stu91d3iqvLdNQfqPPyl.jpg")
-    }
-    
-    func test_home_saved_data_2() {
-        homeViewModel = container.resolve(HomeViewModel.self)
-        homeViewModel.getMovies()
         XCTAssert(homeViewModel.dataList.at(index: 1)?.title == "Sonic the Hedgehog 2")
-        XCTAssert(homeViewModel.dataList.at(index: 1)?.releaseDate == "2022-03-30")
-        XCTAssert(homeViewModel.dataList.at(index: 1)?.posterPath == "/6DrHO1jr3qVrViUO6s6kFiAGM7.jpg")
+        XCTAssert(homeViewModel.dataList.at(index: 0)?.movieID == 752623)
+        XCTAssert(homeViewModel.dataList.at(index: 1)?.movieID == 675353)
     }
     
-    func test_detail_get_movies() {
-        detailViewModel = container.resolve(DetailViewModel.self)
-        detailViewModel.getMovieDetail()
-        XCTAssert(detailViewModel.data.value?.title == "Sonic the Hedgehog 2")
-        XCTAssert(detailViewModel.data.value?.releaseDate == "2022-03-30")
-        XCTAssert(detailViewModel.data.value?.posterPath == "/6DrHO1jr3qVrViUO6s6kFiAGM7.jpg")
-     }
-    
-    func test_detail_get_reviews() {
-        detailViewModel = container.resolve(DetailViewModel.self)
-        detailViewModel.getMovieReview()
-        XCTAssert(detailViewModel.reviewData.value.at(index: 0)?
-                    .authorDetails?.username == "Geronimo1967")
-        XCTAssert(detailViewModel.reviewData.value.at(index: 0)?
-                    .authorDetails?.avatarPath == "/1kks3YnVkpyQxzw36CObFPvhL5f.jpg")
-        XCTAssert(detailViewModel.reviewData.value.at(index: 0)?
-                    .content != nil)
+    func test_home_get_search_movie() {
+        homeViewModel = container.resolve(HomeViewModel.self)
+        homeViewModel.getSearchMovies(urlRequest: MoviesAPI.getSearchMovie("", 1).urlRequest)
+        XCTAssert(homeViewModel.dataList.count > 0)
     }
     
-    func test_favorite_get_list() {
-        detailViewModel = container.resolve(DetailViewModel.self)
-        detailViewModel.getMovieDetail()
-        detailViewModel.saveMovie()
-        favoriteViewModel = container.resolve(FavoriteViewModel.self)
-        favoriteViewModel.getMovies()
-        print(favoriteViewModel.data.value)
-        XCTAssert(favoriteViewModel.data.value.at(index: 0)?.title == "Sonic the Hedgehog 2")
+    func test_detail_get_movie() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        detailViewModel.getMovieDetail(urlRequest: MoviesAPI.getMovieDetail(1).urlRequest)
+        XCTAssertTrue(detailViewModel.data.value != nil)
+    }
+    
+    func test_detail_get_data() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        detailViewModel.getMovieDetail(urlRequest: MoviesAPI.getMovieDetail(1).urlRequest)
+        XCTAssert((detailViewModel.data.value?.movieID ?? 0) == 675353)
+    }
+    
+    func test_detail_get_review() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        detailViewModel.getMovieReview(urlRequest: MoviesAPI.getMovieReview(1).urlRequest)
+        XCTAssertTrue(detailViewModel.reviewData.value != nil)
+    }
+    
+    func test_detail_review_data() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        detailViewModel.getMovieReview(urlRequest: MoviesAPI.getMovieReview(1).urlRequest)
+        XCTAssertTrue(detailViewModel.reviewData.value.at(index: 0)?.id == "624abbe2d9f4a60063674455")
+    }
+    
+    func test_detail_get_cast() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        detailViewModel.getCastList(urlRequst: MoviesAPI.getCast(0).urlRequest)
+        XCTAssertTrue(detailViewModel.castListdata.value.count > 0)
+    }
+    
+    func test_detail_cast_data() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        detailViewModel.getCastList(urlRequst: MoviesAPI.getCast(1).urlRequest)
+        XCTAssertTrue(detailViewModel.castListdata.value.at(index: 0)?.id == 71580)
+    }
+    
+    func test_detail_convert_time() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        let convertedTime = detailViewModel.convertRunTime(runtime: 120)
+        XCTAssertTrue(convertedTime == "2h")
+    }
+    
+    func test_detail_convert_time_2() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        let convertedTime = detailViewModel.convertRunTime(runtime: 130)
+        XCTAssertTrue(convertedTime == "2h 10m")
+    }
+    
+    func test_detail_combined_genre() {
+        detailViewModel = container.resolve(MovieDetailViewModel.self)
+        detailViewModel.getMovieDetail(urlRequest: MoviesAPI.getMovieDetail(1).urlRequest)
+        let combinedGenre = detailViewModel.combineGenre(genre: detailViewModel.data.value?.genres ?? [])
+        XCTAssert(!combinedGenre.isEmpty)
+        XCTAssert(combinedGenre == "Action, Science Fiction, Comedy, Family, Adventure, ")
     }
 }

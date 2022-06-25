@@ -11,6 +11,8 @@ enum MoviesAPI {
     case getMovies(_ page: Int, _ type: String)
     case getMovieDetail(_ id: Int)
     case getMovieReview(_ id: Int)
+    case getSearchMovie(_ keyword: String, _ page: Int)
+    case getCast(_ id: Int)
 }
 
 extension MoviesAPI: EndPointType {
@@ -31,7 +33,7 @@ extension MoviesAPI: EndPointType {
             components?.percentEncodedQuery = tempComponent
             return URLRequest(url: (components?.url!)!)
             
-        case .getMovieDetail(_):
+        case .getMovieDetail(_), .getMovieReview(_), .getCast(_):
             let fullURL = self.baseUrl.appendingPathComponent(self.path)
             var components =  URLComponents(string: fullURL.absoluteString)
             var params: [String: Any] = [:]
@@ -43,11 +45,14 @@ extension MoviesAPI: EndPointType {
             components?.percentEncodedQuery = tempComponent
             return URLRequest(url: (components?.url!)!)
             
-        case .getMovieReview(_):
+        case .getSearchMovie(let keyword, let page):
             let fullURL = self.baseUrl.appendingPathComponent(self.path)
             var components =  URLComponents(string: fullURL.absoluteString)
             var params: [String: Any] = [:]
             params["api_key"] = Constant.APIKey
+            params["page"] = String(page)
+            params["language"] = "en-US"
+            params["query"] = keyword
             components?.queryItems = params.map { (keyAPI, value) in
                 URLQueryItem(name: keyAPI, value: value as? String)
             }
@@ -74,6 +79,10 @@ extension MoviesAPI: EndPointType {
             return "/movie/\(id)"
         case .getMovieReview(let id):
             return "/movie/\(id)/reviews"
+        case .getSearchMovie(_, _):
+            return "/search/movie"
+        case .getCast(let id):
+            return "/movie/\(id)/credits"
         }
     }
 

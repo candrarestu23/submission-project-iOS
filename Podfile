@@ -27,3 +27,18 @@ target 'submissionProjectTests' do
   inherit! :search_paths
   shared_pods
 end
+
+target 'Home' do
+  shared_pods
+  project 'Home/Home'
+end
+
+target 'Core' do
+  shared_pods
+  project 'Core/Core'
+end
+
+target 'Detail' do
+  shared_pods
+  project 'Detail/Detail'
+end

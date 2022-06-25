@@ -9,6 +9,7 @@ import Foundation
 import UIKit
 import Swinject
 import SwinjectStoryboard
+import Detail
 
 class DetailPageBuilder {
     static func build(movieID id: Int,
