@@ -1,0 +1,38 @@
+name: Swift
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: macos-12
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - name: switch to xcode 13
+        run: sudo xcode-select --switch /Applications/Xcode_13.2.app/Contents/Developer
+      # Runs a single command using the runners shell
+      - name: Install Dependencies
+        run: pod install --repo-update
+        shell: bash
+
+      - name: Prepare iOS 12 simulator
+        run: |
+          sudo mkdir -p /Library/Developer/CoreSimulator/Profiles/Runtimes
+          sudo ln -s /Applications/Xcode_13.2.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/CoreSimulator/Profiles/Runtimes/iOS.simruntime /Library/Developer/CoreSimulator/Profiles/Runtimes/iOS\ 15.2.simruntime
+          xcrun simctl list runtimes
+          xcrun simctl create custom-test-device "iPhone 8 Plus" "com.apple.CoreSimulator.SimRuntime.iOS-15-2"
+          xcrun simctl list devices 15.2
+
+      - name: Run tests
+        run: xcodebuild clean test -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'platform=iOS Simulator,name=iPhone 8 Plus'
+
+      # Runs a set of commands using the runners shell
+      - name: Build App
+        run: xcodebuild -workspace 'submissionProject.xcworkspace' -scheme 'submissionProject' -destination 'generic/platform=iOS' -configuration Release build CODE_SIGNING_ALLOWED=NO
